@@ -1,31 +1,163 @@
-//! JWT Claims for authentication.
+//! JWT Claims for authentication tokens.
+//!
+//! This module defines the [`Claims`] struct that represents the payload
+//! of JWT tokens used for user authentication across the Revelation ecosystem.
+//!
+//! # Overview
+//!
+//! JWT (JSON Web Token) claims are the payload of authentication tokens.
+//! They contain information about the authenticated user that can be
+//! extracted from requests without database lookups.
+//!
+//! # Structure
+//!
+//! Claims follow the standard JWT claims with custom extensions:
+//!
+//! | Claim | Type | Description |
+//! |-------|------|-------------|
+//! | `sub` | `Uuid` | Subject - the user ID |
+//! | `role` | `RUserRole` | User's role for authorization |
+//! | `exp` | `usize` | Expiration time (Unix timestamp) |
+//! | `iat` | `Option<usize>` | Issued at time (optional) |
+//!
+//! # Usage
+//!
+//! ## Creating Claims
+//!
+//! ```rust
+//! use revelation_user::{Claims, RUserRole};
+//! use uuid::Uuid;
+//!
+//! let claims = Claims::new(
+//!     Uuid::now_v7(),
+//!     RUserRole::User,
+//!     1735689600 // expiration timestamp
+//! );
+//! ```
+//!
+//! ## Extracting from Requests
+//!
+//! With framework features enabled, claims can be extracted automatically:
+//!
+//! ```rust,ignore
+//! // Axum
+//! async fn handler(claims: Claims) -> impl IntoResponse {
+//!     format!("User: {}", claims.user_id())
+//! }
+//!
+//! // Actix-web
+//! async fn handler(claims: Claims) -> impl Responder {
+//!     format!("User: {}", claims.user_id())
+//! }
+//! ```
+//!
+//! # Security Considerations
+//!
+//! - Always validate `exp` claim before trusting the token
+//! - Use [`is_expired()`](Claims::is_expired) to check expiration
+//! - Store sensitive data in the database, not in claims
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::RUserRole;
 
-/// JWT claims extracted from authentication token.
+/// JWT claims for authentication tokens.
 ///
-/// Used as extractor in web frameworks (axum/actix).
+/// Represents the payload of a JWT token containing user identity
+/// and authorization information.
+///
+/// # Standard Claims
+///
+/// - `sub` (subject): The user's unique identifier
+/// - `exp` (expiration): Unix timestamp when the token expires
+/// - `iat` (issued at): Unix timestamp when the token was issued (optional)
+///
+/// # Custom Claims
+///
+/// - `role`: The user's role for authorization decisions
+///
+/// # Examples
+///
+/// ```rust
+/// use revelation_user::{Claims, RUserRole};
+/// use uuid::Uuid;
+///
+/// // Create claims for a new token
+/// let user_id = Uuid::now_v7();
+/// let claims = Claims::new(user_id, RUserRole::User, 1735689600);
+///
+/// assert_eq!(claims.user_id(), user_id);
+/// assert_eq!(claims.role, RUserRole::User);
+/// ```
+///
+/// # Serialization
+///
+/// Claims serialize to standard JWT format:
+///
+/// ```rust
+/// use revelation_user::{Claims, RUserRole};
+/// use uuid::Uuid;
+///
+/// let claims = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+/// let json = serde_json::to_string(&claims).unwrap();
+///
+/// assert!(json.contains("\"sub\""));
+/// assert!(json.contains("\"role\""));
+/// assert!(json.contains("\"exp\""));
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    /// User ID (subject).
+    /// Subject - the user's unique identifier.
+    ///
+    /// This corresponds to [`RUser::id`](crate::RUser::id).
     pub sub: Uuid,
 
-    /// User role.
+    /// User's role for authorization.
+    ///
+    /// Used to make authorization decisions without database lookups.
     pub role: RUserRole,
 
-    /// Expiration time (Unix timestamp).
+    /// Expiration time as Unix timestamp (seconds since epoch).
+    ///
+    /// Tokens should not be accepted after this time.
     pub exp: usize,
 
-    /// Issued at (Unix timestamp).
+    /// Issued at time as Unix timestamp (optional).
+    ///
+    /// Useful for token refresh logic and auditing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub iat: Option<usize>
 }
 
 impl Claims {
-    /// Create new claims.
+    /// Create new claims for a JWT token.
+    ///
+    /// # Arguments
+    ///
+    /// * `sub` - The user's unique identifier (user ID)
+    /// * `role` - The user's role for authorization
+    /// * `exp` - Expiration time as Unix timestamp
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    ///
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let user_id = Uuid::now_v7();
+    ///
+    /// // Token expires in 1 hour
+    /// let exp = SystemTime::now()
+    ///     .duration_since(UNIX_EPOCH)
+    ///     .unwrap()
+    ///     .as_secs() as usize
+    ///     + 3600;
+    ///
+    /// let claims = Claims::new(user_id, RUserRole::User, exp);
+    /// ```
     #[must_use]
     pub fn new(sub: Uuid, role: RUserRole, exp: usize) -> Self {
         Self {
@@ -36,13 +168,82 @@ impl Claims {
         }
     }
 
-    /// Get user ID.
+    /// Create claims with issued-at timestamp.
+    ///
+    /// # Arguments
+    ///
+    /// * `sub` - The user's unique identifier
+    /// * `role` - The user's role
+    /// * `exp` - Expiration time as Unix timestamp
+    /// * `iat` - Issued at time as Unix timestamp
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let now = 1700000000;
+    /// let exp = now + 3600; // 1 hour later
+    ///
+    /// let claims = Claims::with_iat(Uuid::now_v7(), RUserRole::User, exp, now);
+    ///
+    /// assert_eq!(claims.iat, Some(now));
+    /// ```
+    #[must_use]
+    pub fn with_iat(sub: Uuid, role: RUserRole, exp: usize, iat: usize) -> Self {
+        Self {
+            sub,
+            role,
+            exp,
+            iat: Some(iat)
+        }
+    }
+
+    /// Get the user ID from claims.
+    ///
+    /// This is a convenience method that returns the `sub` claim,
+    /// which represents the user's unique identifier.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let id = Uuid::now_v7();
+    /// let claims = Claims::new(id, RUserRole::User, 0);
+    ///
+    /// assert_eq!(claims.user_id(), id);
+    /// ```
     #[must_use]
     pub fn user_id(&self) -> Uuid {
         self.sub
     }
 
-    /// Check if claims are expired.
+    /// Check if the claims have expired.
+    ///
+    /// Compares the `exp` claim against the current system time.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// // Expired token (exp = 0 means Jan 1, 1970)
+    /// let expired = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    /// assert!(expired.is_expired());
+    ///
+    /// // Future expiration
+    /// let valid = Claims::new(Uuid::now_v7(), RUserRole::User, usize::MAX);
+    /// assert!(!valid.is_expired());
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// This method uses system time, which could be manipulated.
+    /// For high-security scenarios, use server-side time validation.
     #[must_use]
     pub fn is_expired(&self) -> bool {
         use std::time::{SystemTime, UNIX_EPOCH};
@@ -53,5 +254,101 @@ impl Claims {
             .unwrap_or(0);
 
         self.exp < now
+    }
+
+    /// Check if the user has admin role.
+    ///
+    /// Convenience method for authorization checks.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let admin = Claims::new(Uuid::now_v7(), RUserRole::Admin, 0);
+    /// let user = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    ///
+    /// assert!(admin.is_admin());
+    /// assert!(!user.is_admin());
+    /// ```
+    #[must_use]
+    pub fn is_admin(&self) -> bool {
+        self.role.is_admin()
+    }
+
+    /// Check if the user has premium access.
+    ///
+    /// Returns `true` for both Premium and Admin roles.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let premium = Claims::new(Uuid::now_v7(), RUserRole::Premium, 0);
+    /// let admin = Claims::new(Uuid::now_v7(), RUserRole::Admin, 0);
+    /// let user = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    ///
+    /// assert!(premium.is_premium());
+    /// assert!(admin.is_premium()); // Admins have premium access
+    /// assert!(!user.is_premium());
+    /// ```
+    #[must_use]
+    pub fn is_premium(&self) -> bool {
+        self.role.is_premium()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_creates_claims_without_iat() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 1000);
+        assert!(claims.iat.is_none());
+    }
+
+    #[test]
+    fn with_iat_sets_iat() {
+        let claims = Claims::with_iat(Uuid::nil(), RUserRole::User, 1000, 500);
+        assert_eq!(claims.iat, Some(500));
+    }
+
+    #[test]
+    fn user_id_returns_sub() {
+        let id = Uuid::now_v7();
+        let claims = Claims::new(id, RUserRole::User, 0);
+        assert_eq!(claims.user_id(), id);
+    }
+
+    #[test]
+    fn is_expired_returns_true_for_past() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        assert!(claims.is_expired());
+    }
+
+    #[test]
+    fn is_expired_returns_false_for_future() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, usize::MAX);
+        assert!(!claims.is_expired());
+    }
+
+    #[test]
+    fn is_admin_checks_role() {
+        let admin = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+        let user = Claims::new(Uuid::nil(), RUserRole::User, 0);
+
+        assert!(admin.is_admin());
+        assert!(!user.is_admin());
+    }
+
+    #[test]
+    fn serializes_without_iat_when_none() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        let json = serde_json::to_string(&claims).unwrap();
+        assert!(!json.contains("iat"));
     }
 }
