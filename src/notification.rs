@@ -1,7 +1,10 @@
+//! Notification-related types.
+
 use serde::{Deserialize, Serialize};
 
-/// Recipient for Telegram notifications
+/// Telegram notification recipient.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TelegramRecipient {
+    /// Telegram chat ID.
     pub chat_id: i64
 }
