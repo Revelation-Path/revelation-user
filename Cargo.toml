@@ -1,0 +1,24 @@
+[package]
+name = "revelation-user"
+version = "0.1.0"
+edition = "2024"
+authors = ["Revelation Team"]
+description = "User domain for Revelation project"
+license = "MIT"
+repository = "https://github.com/Revelation-Path/revelation-user"
+readme = "README.md"
+keywords = ["revelation", "user", "domain"]
+categories = ["data-structures"]
+
+[features]
+default = []
+db = ["dep:sqlx"]
+backend = ["dep:masterror"]
+
+[dependencies]
+masterror = { version = "0.26", optional = true }
+serde = { version = "1", features = ["derive"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.20", features = ["derive"] }
+sqlx = { version = "0.8", features = ["postgres"], optional = true }
