@@ -172,6 +172,7 @@ pub mod entity;
 pub mod extend;
 mod gender;
 mod notification;
+mod permissions;
 pub mod projections;
 mod role;
 
@@ -187,6 +188,7 @@ pub use entity::*;
 pub use extract::*;
 pub use gender::*;
 pub use notification::*;
+pub use permissions::*;
 pub use projections::*;
 pub use role::*;
 

@@ -60,7 +60,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::RUserRole;
+use crate::{Permissions, RUserRole, Role};
 
 /// JWT claims for authentication tokens.
 ///
@@ -127,7 +127,16 @@ pub struct Claims {
     ///
     /// Useful for token refresh logic and auditing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub iat: Option<usize>
+    pub iat: Option<usize>,
+
+    /// Custom permissions (optional).
+    ///
+    /// When set, these permissions override the role's default permissions.
+    /// Useful for fine-grained access control beyond role-based permissions.
+    ///
+    /// If `None`, permissions are derived from the role.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<Permissions>
 }
 
 impl Claims {
@@ -164,7 +173,8 @@ impl Claims {
             sub,
             role,
             exp,
-            iat: None
+            iat: None,
+            permissions: None
         }
     }
 
@@ -196,7 +206,52 @@ impl Claims {
             sub,
             role,
             exp,
-            iat: Some(iat)
+            iat: Some(iat),
+            permissions: None
+        }
+    }
+
+    /// Create claims with custom permissions.
+    ///
+    /// Use this when you need fine-grained permissions that differ
+    /// from the role's default permissions.
+    ///
+    /// # Arguments
+    ///
+    /// * `sub` - The user's unique identifier
+    /// * `role` - The user's role
+    /// * `exp` - Expiration time as Unix timestamp
+    /// * `permissions` - Custom permissions to override role defaults
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, Permissions, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// // User with custom elevated permissions
+    /// let claims = Claims::with_permissions(
+    ///     Uuid::now_v7(),
+    ///     RUserRole::User,
+    ///     usize::MAX,
+    ///     Permissions::READ | Permissions::WRITE | Permissions::EXPORT
+    /// );
+    ///
+    /// assert!(claims.can(Permissions::EXPORT));
+    /// ```
+    #[must_use]
+    pub fn with_permissions(
+        sub: Uuid,
+        role: RUserRole,
+        exp: usize,
+        permissions: Permissions
+    ) -> Self {
+        Self {
+            sub,
+            role,
+            exp,
+            iat: None,
+            permissions: Some(permissions)
         }
     }
 
@@ -299,6 +354,96 @@ impl Claims {
     pub fn is_premium(&self) -> bool {
         self.role.is_premium()
     }
+
+    /// Get the effective permissions for this claims.
+    ///
+    /// Returns custom permissions if set, otherwise derives
+    /// permissions from the role.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, Permissions, RUserRole, Role};
+    /// use uuid::Uuid;
+    ///
+    /// // Without custom permissions - uses role defaults
+    /// let claims = Claims::new(Uuid::now_v7(), RUserRole::Admin, 0);
+    /// assert_eq!(
+    ///     claims.effective_permissions(),
+    ///     RUserRole::Admin.permissions()
+    /// );
+    ///
+    /// // With custom permissions - uses those instead
+    /// let claims = Claims::with_permissions(
+    ///     Uuid::now_v7(),
+    ///     RUserRole::User,
+    ///     0,
+    ///     Permissions::READ | Permissions::EXPORT
+    /// );
+    /// assert!(claims.effective_permissions().contains(Permissions::EXPORT));
+    /// ```
+    #[must_use]
+    pub fn effective_permissions(&self) -> Permissions {
+        self.permissions.unwrap_or_else(|| self.role.permissions())
+    }
+
+    /// Check if the claims have the specified permission.
+    ///
+    /// Uses custom permissions if set, otherwise checks role permissions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, Permissions, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let admin = Claims::new(Uuid::now_v7(), RUserRole::Admin, 0);
+    /// assert!(admin.can(Permissions::DELETE));
+    ///
+    /// let user = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    /// assert!(!user.can(Permissions::DELETE));
+    /// ```
+    #[must_use]
+    pub fn can(&self, permission: Permissions) -> bool {
+        self.effective_permissions().contains(permission)
+    }
+
+    /// Check if the claims have all the specified permissions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, Permissions, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let admin = Claims::new(Uuid::now_v7(), RUserRole::Admin, 0);
+    /// let required = Permissions::READ | Permissions::WRITE | Permissions::DELETE;
+    /// assert!(admin.can_all(required));
+    ///
+    /// let user = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    /// assert!(!user.can_all(required));
+    /// ```
+    #[must_use]
+    pub fn can_all(&self, permissions: Permissions) -> bool {
+        self.effective_permissions().contains(permissions)
+    }
+
+    /// Check if the claims have any of the specified permissions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use revelation_user::{Claims, Permissions, RUserRole};
+    /// use uuid::Uuid;
+    ///
+    /// let user = Claims::new(Uuid::now_v7(), RUserRole::User, 0);
+    /// let any_of = Permissions::ADMIN | Permissions::READ;
+    /// assert!(user.can_any(any_of)); // Has READ
+    /// ```
+    #[must_use]
+    pub fn can_any(&self, permissions: Permissions) -> bool {
+        self.effective_permissions().intersects(permissions)
+    }
 }
 
 #[cfg(test)]
@@ -361,5 +506,77 @@ mod tests {
         assert!(premium.is_premium());
         assert!(admin.is_premium());
         assert!(!user.is_premium());
+    }
+
+    #[test]
+    fn new_creates_claims_without_permissions() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        assert!(claims.permissions.is_none());
+    }
+
+    #[test]
+    fn with_permissions_sets_permissions() {
+        let perms = Permissions::READ | Permissions::WRITE;
+        let claims = Claims::with_permissions(Uuid::nil(), RUserRole::User, 0, perms);
+        assert_eq!(claims.permissions, Some(perms));
+    }
+
+    #[test]
+    fn effective_permissions_uses_role_when_no_custom() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+        assert_eq!(claims.effective_permissions(), Permissions::all());
+    }
+
+    #[test]
+    fn effective_permissions_uses_custom_when_set() {
+        let custom = Permissions::READ | Permissions::EXPORT;
+        let claims = Claims::with_permissions(Uuid::nil(), RUserRole::Admin, 0, custom);
+        assert_eq!(claims.effective_permissions(), custom);
+    }
+
+    #[test]
+    fn can_checks_permission() {
+        let admin = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+        assert!(admin.can(Permissions::DELETE));
+
+        let user = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        assert!(!user.can(Permissions::DELETE));
+    }
+
+    #[test]
+    fn can_all_checks_multiple_permissions() {
+        let required = Permissions::READ | Permissions::WRITE;
+
+        let admin = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+        assert!(admin.can_all(required));
+
+        let user = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        assert!(!user.can_all(required));
+    }
+
+    #[test]
+    fn can_any_checks_any_permission() {
+        let any_of = Permissions::ADMIN | Permissions::READ;
+
+        let user = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        assert!(user.can_any(any_of));
+
+        let no_match = Permissions::ADMIN | Permissions::DELETE;
+        assert!(!user.can_any(no_match));
+    }
+
+    #[test]
+    fn serializes_without_permissions_when_none() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        let json = serde_json::to_string(&claims).unwrap();
+        assert!(!json.contains("permissions"));
+    }
+
+    #[test]
+    fn serializes_with_permissions_when_set() {
+        let perms = Permissions::READ | Permissions::WRITE;
+        let claims = Claims::with_permissions(Uuid::nil(), RUserRole::User, 0, perms);
+        let json = serde_json::to_string(&claims).unwrap();
+        assert!(json.contains("permissions"));
     }
 }

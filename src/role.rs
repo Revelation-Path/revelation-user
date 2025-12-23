@@ -15,6 +15,23 @@
 //! - **Premium**: Access to premium features + user features
 //! - **User**: Basic access only
 //!
+//! # Permission Integration
+//!
+//! [`RUserRole`] implements the [`Role`] trait, providing
+//! permission-based access control:
+//!
+//! ```rust
+//! use revelation_user::{Permissions, RUserRole, Role};
+//!
+//! let admin = RUserRole::Admin;
+//! assert!(admin.can(Permissions::DELETE));
+//! assert!(admin.can_all(Permissions::READ | Permissions::WRITE));
+//!
+//! let user = RUserRole::User;
+//! assert!(user.can(Permissions::READ));
+//! assert!(!user.can(Permissions::ADMIN));
+//! ```
+//!
 //! # Database Integration
 //!
 //! With the `db` feature, [`RUserRole`] maps to PostgreSQL enum:
@@ -37,8 +54,12 @@
 //! // Default is User
 //! assert_eq!(RUserRole::default(), RUserRole::User);
 //! ```
+//!
+//! [`Role`]: crate::Role
 
 use serde::{Deserialize, Serialize};
+
+use crate::{Permissions, Role};
 
 /// User role for authorization decisions.
 ///
@@ -197,6 +218,50 @@ impl core::fmt::Display for RUserRole {
     }
 }
 
+/// Implementation of [`Role`] trait for permission-based access control.
+///
+/// # Permission Mapping
+///
+/// | Role | Permissions |
+/// |------|-------------|
+/// | `User` | READ, API_ACCESS |
+/// | `Premium` | READ, WRITE, API_ACCESS, PREMIUM, EXPORT |
+/// | `Admin` | All permissions |
+///
+/// # Examples
+///
+/// ```rust
+/// use revelation_user::{Permissions, RUserRole, Role};
+///
+/// let admin = RUserRole::Admin;
+/// assert!(admin.can(Permissions::MANAGE_USERS));
+/// assert!(admin.can_all(Permissions::all()));
+///
+/// let premium = RUserRole::Premium;
+/// assert!(premium.can(Permissions::PREMIUM));
+/// assert!(premium.can(Permissions::EXPORT));
+/// assert!(!premium.can(Permissions::ADMIN));
+/// ```
+impl Role for RUserRole {
+    fn permissions(&self) -> Permissions {
+        match self {
+            Self::User => Permissions::READ | Permissions::API_ACCESS,
+            Self::Premium => {
+                Permissions::READ
+                    | Permissions::WRITE
+                    | Permissions::API_ACCESS
+                    | Permissions::PREMIUM
+                    | Permissions::EXPORT
+            }
+            Self::Admin => Permissions::all()
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        self.as_str()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +333,59 @@ mod tests {
     #[test]
     fn display_matches_as_str() {
         assert_eq!(format!("{}", RUserRole::Premium), "premium");
+    }
+
+    #[test]
+    fn role_trait_permissions_user() {
+        let perms = RUserRole::User.permissions();
+        assert!(perms.contains(Permissions::READ));
+        assert!(perms.contains(Permissions::API_ACCESS));
+        assert!(!perms.contains(Permissions::WRITE));
+        assert!(!perms.contains(Permissions::ADMIN));
+    }
+
+    #[test]
+    fn role_trait_permissions_premium() {
+        let perms = RUserRole::Premium.permissions();
+        assert!(perms.contains(Permissions::READ));
+        assert!(perms.contains(Permissions::WRITE));
+        assert!(perms.contains(Permissions::PREMIUM));
+        assert!(perms.contains(Permissions::EXPORT));
+        assert!(!perms.contains(Permissions::ADMIN));
+    }
+
+    #[test]
+    fn role_trait_permissions_admin() {
+        let perms = RUserRole::Admin.permissions();
+        assert_eq!(perms, Permissions::all());
+    }
+
+    #[test]
+    fn role_trait_can() {
+        assert!(RUserRole::Admin.can(Permissions::DELETE));
+        assert!(RUserRole::Premium.can(Permissions::PREMIUM));
+        assert!(!RUserRole::User.can(Permissions::DELETE));
+    }
+
+    #[test]
+    fn role_trait_can_all() {
+        let required = Permissions::READ | Permissions::WRITE;
+        assert!(RUserRole::Admin.can_all(required));
+        assert!(RUserRole::Premium.can_all(required));
+        assert!(!RUserRole::User.can_all(required));
+    }
+
+    #[test]
+    fn role_trait_can_any() {
+        let any_of = Permissions::ADMIN | Permissions::READ;
+        assert!(RUserRole::User.can_any(any_of));
+        assert!(RUserRole::Admin.can_any(any_of));
+    }
+
+    #[test]
+    fn role_trait_name() {
+        assert_eq!(RUserRole::User.name(), "user");
+        assert_eq!(RUserRole::Premium.name(), "premium");
+        assert_eq!(RUserRole::Admin.name(), "admin");
     }
 }
