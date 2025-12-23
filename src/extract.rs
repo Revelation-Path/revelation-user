@@ -10,7 +10,8 @@
 //! | `axum` | [Axum](https://crates.io/crates/axum) | Tower-based async framework |
 //! | `actix` | [Actix-web](https://crates.io/crates/actix-web) | Actor-based async framework |
 //!
-//! **Note**: These features are mutually exclusive. Enable only one.
+//! **Note**: These features are mutually exclusive. If both are enabled
+//! (e.g., via `--all-features`), `axum` takes precedence.
 //!
 //! # Authentication Flow
 //!
@@ -123,15 +124,13 @@
 //! [`JwtValidator`]: self::JwtValidator
 //! [`OptionalClaims`]: self::OptionalClaims
 
-#[cfg(all(feature = "axum", feature = "actix"))]
-compile_error!("Features `axum` and `actix` are mutually exclusive. Enable only one.");
-
+// When both features enabled, axum takes precedence
 #[cfg(feature = "axum")]
 mod axum_extract;
 #[cfg(feature = "axum")]
 pub use axum_extract::*;
 
-#[cfg(feature = "actix")]
+#[cfg(all(feature = "actix", not(feature = "axum")))]
 mod actix_extract;
-#[cfg(feature = "actix")]
+#[cfg(all(feature = "actix", not(feature = "axum")))]
 pub use actix_extract::*;

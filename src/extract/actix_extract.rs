@@ -274,9 +274,9 @@ impl FromRequest for Claims {
                 {
                     Some(t) => t.to_owned(),
                     None => {
-                        return ready(
-                            Err(AppError::unauthorized("Authentication required").into())
-                        );
+                        return ready(Err(
+                            AppError::unauthorized("Authentication required").into()
+                        ));
                     }
                 }
             }
