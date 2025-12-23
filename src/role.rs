@@ -250,4 +250,23 @@ mod tests {
         assert_eq!(format!("{}", RUserRole::User), "user");
         assert_eq!(format!("{}", RUserRole::Admin), "admin");
     }
+
+    #[test]
+    fn is_user_only_for_user() {
+        assert!(RUserRole::User.is_user());
+        assert!(!RUserRole::Premium.is_user());
+        assert!(!RUserRole::Admin.is_user());
+    }
+
+    #[test]
+    fn as_str_returns_correct_values() {
+        assert_eq!(RUserRole::User.as_str(), "user");
+        assert_eq!(RUserRole::Premium.as_str(), "premium");
+        assert_eq!(RUserRole::Admin.as_str(), "admin");
+    }
+
+    #[test]
+    fn display_matches_as_str() {
+        assert_eq!(format!("{}", RUserRole::Premium), "premium");
+    }
 }

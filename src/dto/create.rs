@@ -215,4 +215,12 @@ mod tests {
         let req = CreateUserRequest::email("valid@example.com");
         assert!(req.validate().is_ok());
     }
+
+    #[test]
+    fn phone_constructor() {
+        let req = CreateUserRequest::phone("+14155551234");
+        assert_eq!(req.phone.as_deref(), Some("+14155551234"));
+        assert!(req.telegram_id.is_none());
+        assert!(req.email.is_none());
+    }
 }

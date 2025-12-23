@@ -629,8 +629,91 @@ where
     }
 }
 
-// Note: Unit tests for extend_user! macro are not included here because
-// the macro generates code that depends on bon::Builder derive macro behavior
-// which cannot be tested in isolation within the same crate. The macro
-// functionality is validated through integration tests and doc examples
-// (marked with `ignore` since they also need special compilation context).
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Gender, RUser};
+
+    #[test]
+    fn extended_builder_new() {
+        let user = RUser::from_telegram(123);
+        let builder: ExtendedBuilder<(), _> = ExtendedBuilder::new(user.clone(), |u: RUser| u.id);
+
+        assert_eq!(builder.telegram_id, Some(123));
+    }
+
+    #[test]
+    fn extended_builder_name() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::empty(), |u: RUser| u).name("Test");
+
+        assert_eq!(builder.user.name.as_deref(), Some("Test"));
+    }
+
+    #[test]
+    fn extended_builder_email() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::empty(), |u: RUser| u).email("a@b.com");
+
+        assert_eq!(builder.user.email.as_deref(), Some("a@b.com"));
+    }
+
+    #[test]
+    fn extended_builder_phone() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::empty(), |u: RUser| u).phone("+1234567890");
+
+        assert_eq!(builder.user.phone.as_deref(), Some("+1234567890"));
+    }
+
+    #[test]
+    fn extended_builder_gender() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::empty(), |u: RUser| u).gender(Gender::Male);
+
+        assert_eq!(builder.user.gender, Some(Gender::Male));
+    }
+
+    #[test]
+    fn extended_builder_telegram_id() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::empty(), |u: RUser| u).telegram_id(999);
+
+        assert_eq!(builder.user.telegram_id, Some(999));
+    }
+
+    #[test]
+    fn extended_builder_then() {
+        let result: RUser = ExtendedBuilder::<(), _>::new(RUser::from_telegram(123), |u: RUser| u)
+            .name("Test")
+            .then();
+
+        assert_eq!(result.name.as_deref(), Some("Test"));
+        assert_eq!(result.telegram_id, Some(123));
+    }
+
+    #[test]
+    fn extended_builder_deref() {
+        let builder: ExtendedBuilder<(), _> =
+            ExtendedBuilder::new(RUser::from_email("x@y.com"), |u: RUser| u);
+
+        assert_eq!(builder.email.as_deref(), Some("x@y.com"));
+    }
+
+    #[test]
+    fn extended_builder_chaining() {
+        let result: RUser = ExtendedBuilder::<(), _>::new(RUser::empty(), |u: RUser| u)
+            .name("John")
+            .email("john@example.com")
+            .phone("+14155551234")
+            .gender(Gender::Male)
+            .telegram_id(123456789)
+            .then();
+
+        assert_eq!(result.name.as_deref(), Some("John"));
+        assert_eq!(result.email.as_deref(), Some("john@example.com"));
+        assert_eq!(result.phone.as_deref(), Some("+14155551234"));
+        assert_eq!(result.gender, Some(Gender::Male));
+        assert_eq!(result.telegram_id, Some(123456789));
+    }
+}

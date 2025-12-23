@@ -351,4 +351,15 @@ mod tests {
         let json = serde_json::to_string(&claims).unwrap();
         assert!(!json.contains("iat"));
     }
+
+    #[test]
+    fn is_premium_checks_role() {
+        let premium = Claims::new(Uuid::nil(), RUserRole::Premium, 0);
+        let admin = Claims::new(Uuid::nil(), RUserRole::Admin, 0);
+        let user = Claims::new(Uuid::nil(), RUserRole::User, 0);
+
+        assert!(premium.is_premium());
+        assert!(admin.is_premium());
+        assert!(!user.is_premium());
+    }
 }

@@ -373,4 +373,20 @@ mod tests {
         let json = serde_json::to_string(&user).unwrap();
         assert!(json.contains("\"telegram_id\":123"));
     }
+
+    #[test]
+    fn from_phone_sets_phone() {
+        let user = RUser::from_phone("+14155551234");
+        assert_eq!(user.phone.as_deref(), Some("+14155551234"));
+        assert!(user.telegram_id.is_none());
+        assert!(user.email.is_none());
+    }
+
+    #[test]
+    fn with_id_sets_specific_id() {
+        let id = Uuid::nil();
+        let user = RUser::with_id(id);
+        assert_eq!(user.id, id);
+        assert!(user.name.is_none());
+    }
 }

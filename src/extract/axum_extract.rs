@@ -373,3 +373,225 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use http::Request;
+    use uuid::Uuid;
+
+    use super::*;
+    use crate::RUserRole;
+
+    struct MockJwtValidator {
+        claims: Option<Claims>
+    }
+
+    impl JwtValidator for MockJwtValidator {
+        fn decode(&self, _token: &str) -> Result<Claims, AppError> {
+            self.claims
+                .clone()
+                .ok_or_else(|| AppError::unauthorized("Invalid token"))
+        }
+    }
+
+    struct MockAuthConfig;
+
+    impl AuthConfig for MockAuthConfig {
+        fn cookie_name(&self) -> &str {
+            "jwt"
+        }
+    }
+
+    fn make_parts_with_extensions(
+        jwt: Arc<dyn JwtValidator>,
+        config: Arc<dyn AuthConfig>
+    ) -> Parts {
+        let req = Request::builder()
+            .header("Authorization", "Bearer test-token")
+            .body(())
+            .unwrap();
+        let (mut parts, _) = req.into_parts();
+        parts.extensions.insert(jwt);
+        parts.extensions.insert(config);
+        parts
+    }
+
+    #[tokio::test]
+    async fn claims_extracts_from_bearer() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, usize::MAX);
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: Some(claims.clone())
+        });
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+        let mut parts = make_parts_with_extensions(jwt, config);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().sub, claims.sub);
+    }
+
+    #[tokio::test]
+    async fn claims_extracts_from_cookie() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::Premium, usize::MAX);
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: Some(claims.clone())
+        });
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+
+        let req = Request::builder()
+            .header("Cookie", "jwt=test-cookie-token")
+            .body(())
+            .unwrap();
+        let (mut parts, _) = req.into_parts();
+        parts.extensions.insert(jwt);
+        parts.extensions.insert(config);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().sub, claims.sub);
+    }
+
+    #[tokio::test]
+    async fn claims_fails_without_auth_config() {
+        let req = Request::builder().body(()).unwrap();
+        let (mut parts, _) = req.into_parts();
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: None
+        });
+        parts.extensions.insert(jwt);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn claims_fails_without_jwt_validator() {
+        let req = Request::builder().body(()).unwrap();
+        let (mut parts, _) = req.into_parts();
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+        parts.extensions.insert(config);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn claims_fails_without_token() {
+        let req = Request::builder().body(()).unwrap();
+        let (mut parts, _) = req.into_parts();
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: None
+        });
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+        parts.extensions.insert(jwt);
+        parts.extensions.insert(config);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn claims_fails_with_invalid_token() {
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: None
+        });
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+        let mut parts = make_parts_with_extensions(jwt, config);
+
+        let result = Claims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn optional_claims_extracts_valid() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::Admin, usize::MAX);
+        let jwt: Arc<dyn JwtValidator> = Arc::new(MockJwtValidator {
+            claims: Some(claims)
+        });
+        let config: Arc<dyn AuthConfig> = Arc::new(MockAuthConfig);
+        let mut parts = make_parts_with_extensions(jwt, config);
+
+        let result = OptionalClaims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_authenticated());
+    }
+
+    #[tokio::test]
+    async fn optional_claims_returns_none_on_failure() {
+        let req = Request::builder().body(()).unwrap();
+        let (mut parts, _) = req.into_parts();
+
+        let result = OptionalClaims::from_request_parts(&mut parts, &()).await;
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap().is_authenticated());
+    }
+
+    #[test]
+    fn optional_claims_into_inner_some() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        let optional = OptionalClaims(Some(claims.clone()));
+        let inner = optional.into_inner();
+
+        assert!(inner.is_some());
+        assert_eq!(inner.unwrap().sub, claims.sub);
+    }
+
+    #[test]
+    fn optional_claims_into_inner_none() {
+        let optional = OptionalClaims(None);
+        assert!(optional.into_inner().is_none());
+    }
+
+    #[test]
+    fn optional_claims_as_ref_some() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        let optional = OptionalClaims(Some(claims));
+
+        assert!(optional.as_ref().is_some());
+    }
+
+    #[test]
+    fn optional_claims_as_ref_none() {
+        let optional = OptionalClaims(None);
+        assert!(optional.as_ref().is_none());
+    }
+
+    #[test]
+    fn optional_claims_is_authenticated_true() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::User, 0);
+        let optional = OptionalClaims(Some(claims));
+
+        assert!(optional.is_authenticated());
+    }
+
+    #[test]
+    fn optional_claims_is_authenticated_false() {
+        let optional = OptionalClaims(None);
+        assert!(!optional.is_authenticated());
+    }
+
+    #[test]
+    fn optional_claims_clone() {
+        let claims = Claims::new(Uuid::nil(), RUserRole::Admin, 100);
+        let optional = OptionalClaims(Some(claims));
+        let cloned = optional.clone();
+
+        assert!(cloned.is_authenticated());
+        assert_eq!(cloned.as_ref().unwrap().role, RUserRole::Admin);
+    }
+
+    #[test]
+    fn optional_claims_debug() {
+        let optional = OptionalClaims(None);
+        let debug_str = format!("{:?}", optional);
+        assert!(debug_str.contains("OptionalClaims"));
+    }
+}
