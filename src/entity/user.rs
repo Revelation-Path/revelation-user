@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! User entity - the core aggregate of the user domain.
 //!
 //! This module defines [`RUser`], the primary user representation in the

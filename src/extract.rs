@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Framework-specific extractors for authentication.
 //!
 //! This module provides JWT/session extractors for web frameworks,

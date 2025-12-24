@@ -1,2 +1,5 @@
+# SPDX-FileCopyrightText: 2025 Revelation Team
+# SPDX-License-Identifier: MIT
+
 /target
 Cargo.lock

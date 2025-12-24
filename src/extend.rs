@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Extension utilities for creating derived user types.
 //!
 //! This module provides the [`extend_user!`] macro for creating

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Revelation Team
+# SPDX-License-Identifier: MIT
+
 name: CI
 
 on:
@@ -114,13 +117,25 @@ jobs:
       - name: Security audit
         run: cargo deny check advisories
 
+  reuse:
+    name: REUSE Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install reuse
+        run: pip install --user reuse
+
+      - name: Check REUSE compliance
+        run: reuse lint
+
   # ════════════════════════════════════════════════════════════════════════════
   # STAGE 2: TEST (after checks pass)
   # ════════════════════════════════════════════════════════════════════════════
 
   test:
     name: Test Suite
-    needs: [check, fmt, security]
+    needs: [check, fmt, security, reuse]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -207,7 +222,7 @@ jobs:
 
   changelog:
     name: Update Changelog
-    needs: [check, fmt, security]
+    needs: [check, fmt, security, reuse]
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'push' &&

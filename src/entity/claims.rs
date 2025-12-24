@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! JWT Claims for authentication tokens.
 //!
 //! This module defines the [`Claims`] struct that represents the payload

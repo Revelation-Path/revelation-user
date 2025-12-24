@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! User profile update DTOs.
 //!
 //! This module provides request types for updating user profile data.

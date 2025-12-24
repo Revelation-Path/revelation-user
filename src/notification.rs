@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Notification recipient types.
 //!
 //! This module provides types for notification delivery targets.

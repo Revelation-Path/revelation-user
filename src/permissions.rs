@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Permission-based Role-Based Access Control (RBAC).
 //!
 //! This module provides a professional, production-ready permission system

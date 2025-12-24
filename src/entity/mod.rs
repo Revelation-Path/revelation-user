@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Core domain entities for user management.
 //!
 //! This module contains the fundamental types that represent users

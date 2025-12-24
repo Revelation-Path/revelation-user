@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 Revelation Team
+SPDX-License-Identifier: MIT
+-->
+
 <a id="top"></a>
 
 <p align="center">
@@ -31,6 +36,9 @@
 <p align="center">
   <a href="https://github.com/Revelation-Path/revelation-user/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge" alt="License: MIT"/>
+  </a>
+  <a href="https://api.reuse.software/info/github.com/Revelation-Path/revelation-user">
+    <img src="https://img.shields.io/reuse/compliance/github.com%2FRevelation-Path%2Frevelation-user?style=for-the-badge" alt="REUSE Compliant"/>
   </a>
 </p>
 

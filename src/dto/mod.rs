@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Data Transfer Objects for API operations.
 //!
 //! This module provides request/response types for user-related

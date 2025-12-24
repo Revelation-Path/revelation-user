@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Contact binding DTOs.
 //!
 //! This module provides request types for binding contact methods

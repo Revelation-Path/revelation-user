@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Public user projection for API responses.
 //!
 //! This module provides [`RUserPublic`], a read-only view of user data

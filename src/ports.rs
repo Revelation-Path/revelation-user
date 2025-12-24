@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Port traits for infrastructure layer.
 //!
 //! This module defines repository traits following hexagonal architecture

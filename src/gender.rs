@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Gender enumeration for user profiles.
 //!
 //! This module provides the [`Gender`] enum for representing

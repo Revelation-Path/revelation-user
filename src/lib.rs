@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! # revelation-user
 //!
 //! A professional user domain crate for the Revelation ecosystem.

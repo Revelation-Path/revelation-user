@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Axum extractors for JWT authentication.
 //!
 //! This module provides [`Claims`] extraction from HTTP requests

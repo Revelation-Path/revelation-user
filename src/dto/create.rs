@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! User creation DTOs.
 //!
 //! This module provides request types for creating new users.

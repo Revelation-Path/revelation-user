@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Revelation Team
+# SPDX-License-Identifier: MIT
+
 trailing_comma = "Never"
 brace_style = "SameLineWhere"
 struct_field_align_threshold = 20

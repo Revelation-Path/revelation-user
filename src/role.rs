@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! User role enumeration for authorization.
 //!
 //! This module provides the [`RUserRole`] enum for role-based

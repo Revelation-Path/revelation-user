@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025 Revelation Team
+// SPDX-License-Identifier: MIT
+
 //! Authentication user projection for JWT/session context.
 //!
 //! This module provides [`RUserAuth`], a projection optimized for
