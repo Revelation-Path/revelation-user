@@ -12,8 +12,10 @@ categories = ["data-structures", "web-programming"]
 
 [features]
 default = []
-db = ["dep:sqlx"]
-api = ["masterror/openapi", "dep:utoipa"]
+postgres = ["db", "entity-derive/postgres"]
+db = ["dep:sqlx", "dep:async-trait"]
+api = ["masterror/openapi", "dep:utoipa", "entity-derive/api"]
+validate = ["entity-derive/validate"]
 axum = ["dep:axum", "dep:axum-extra", "masterror/axum"]
 actix = ["dep:actix-web", "dep:futures-util", "masterror/actix"]
 
@@ -27,6 +29,8 @@ chrono = { version = "0.4", features = ["serde"] }
 regex = "1"
 validator = { version = "0.20", features = ["derive"] }
 masterror = "0.26"
+entity-derive = "0.2"
+async-trait = { version = "0.1", optional = true }
 
 # Optional: Database
 sqlx = { version = "0.8", features = ["postgres"], optional = true }

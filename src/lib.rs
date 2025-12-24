@@ -25,12 +25,8 @@
 //! // From Telegram authentication
 //! let user = RUser::from_telegram(123456789);
 //!
-//! // From email with additional fields
-//! let user = RUser::builder()
-//!     .id(uuid::Uuid::now_v7())
-//!     .name("John Doe")
-//!     .email("john@example.com")
-//!     .build();
+//! // From email authentication
+//! let user = RUser::from_email("john@example.com");
 //! ```
 //!
 //! ## Features

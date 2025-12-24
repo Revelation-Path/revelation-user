@@ -13,16 +13,12 @@
 //! ```rust
 //! use revelation_user::{RUser, RUserPublic};
 //!
-//! let user = RUser::builder()
-//!     .id(uuid::Uuid::now_v7())
-//!     .email("secret@example.com") // Sensitive!
-//!     .telegram_id(123456789) // Sensitive!
-//!     .name("John Doe")
-//!     .build();
+//! // User with sensitive data
+//! let user = RUser::from_email("secret@example.com");
 //!
 //! let public: RUserPublic = user.into();
 //!
-//! // JSON output: {"id":"...","name":"John Doe","gender":null}
+//! // JSON output: {"id":"...","name":null,"gender":null}
 //! // Note: email and telegram_id are NOT included
 //! ```
 //!
@@ -33,11 +29,9 @@
 //! ```rust
 //! use revelation_user::{Gender, RUser, RUserPublic};
 //!
-//! let user = RUser::builder()
-//!     .id(uuid::Uuid::now_v7())
-//!     .name("Alice")
-//!     .gender(Gender::Female)
-//!     .build();
+//! let mut user = RUser::empty();
+//! user.name = Some("Alice".into());
+//! user.gender = Some(Gender::Female);
 //!
 //! let public: RUserPublic = user.into();
 //! assert_eq!(public.name.as_deref(), Some("Alice"));
@@ -115,13 +109,12 @@ use crate::{Gender, RUser};
 ///
 /// ```rust
 /// use revelation_user::{Gender, RUser, RUserPublic};
+/// use uuid::Uuid;
 ///
-/// let user = RUser::builder()
-///     .id(uuid::Uuid::nil())
-///     .name("Test User")
-///     .gender(Gender::Male)
-///     .email("secret@test.com") // Will NOT appear in JSON
-///     .build();
+/// let mut user = RUser::with_id(Uuid::nil());
+/// user.name = Some("Test User".into());
+/// user.gender = Some(Gender::Male);
+/// user.email = Some("secret@test.com".into());
 ///
 /// let public: RUserPublic = user.into();
 /// let json = serde_json::to_string(&public).unwrap();
@@ -209,13 +202,11 @@ mod tests {
 
     #[test]
     fn from_user_copies_public_fields() {
-        let user = RUser::builder()
-            .id(Uuid::nil())
-            .name("Test")
-            .gender(Gender::Male)
-            .email("secret@test.com")
-            .telegram_id(123)
-            .build();
+        let mut user = RUser::with_id(Uuid::nil());
+        user.name = Some("Test".into());
+        user.gender = Some(Gender::Male);
+        user.email = Some("secret@test.com".into());
+        user.telegram_id = Some(123);
 
         let public: RUserPublic = user.into();
 
@@ -235,10 +226,8 @@ mod tests {
 
     #[test]
     fn serialization_excludes_sensitive_fields() {
-        let user = RUser::builder()
-            .id(Uuid::nil())
-            .email("secret@test.com")
-            .build();
+        let mut user = RUser::with_id(Uuid::nil());
+        user.email = Some("secret@test.com".into());
 
         let public: RUserPublic = user.into();
         let json = serde_json::to_string(&public).unwrap();

@@ -5,16 +5,21 @@
 //!
 //! # Overview
 //!
-//! The entity module provides two main types:
+//! The entity module provides:
 //!
-//! - [`RUser`] - The core user aggregate containing all user data
+//! - [`RUser`] - The core user aggregate
 //! - [`Claims`] - JWT claims for authentication tokens
+//!
+//! # Generated Types (via entity-derive)
+//!
+//! - [`CreateRUserRequest`] - DTO for user creation
+//! - [`UpdateRUserRequest`] - DTO for profile updates
+//! - [`RUserResponse`] - DTO for API responses
 //!
 //! # User Entity
 //!
 //! [`RUser`] is the primary user representation, designed with:
 //!
-//! - **Builder pattern** via [`bon`] for flexible construction
 //! - **Preset constructors** for common authentication flows
 //! - **Optional fields** for progressive profile completion
 //! - **Timestamps** for auditing
@@ -25,27 +30,23 @@
 //! // Quick creation from Telegram
 //! let user = RUser::from_telegram(123456789);
 //!
-//! // Full builder access
-//! let user = RUser::builder()
-//!     .id(uuid::Uuid::now_v7())
-//!     .name("John Doe")
-//!     .email("john@example.com")
-//!     .telegram_id(123456789)
-//!     .build();
+//! // From email
+//! let user = RUser::from_email("john@example.com");
+//!
+//! // Empty user for OAuth
+//! let user = RUser::empty();
 //! ```
 //!
 //! # JWT Claims
 //!
-//! [`Claims`] represents the payload of JWT tokens used for authentication:
+//! [`Claims`] represents the payload of JWT tokens:
 //!
 //! ```rust
 //! use chrono::Utc;
 //! use revelation_user::{Claims, RUserRole};
 //! use uuid::Uuid;
 //!
-//! // Token expires in 1 hour
 //! let exp = (Utc::now().timestamp() + 3600) as usize;
-//!
 //! let claims = Claims::new(Uuid::now_v7(), RUserRole::User, exp);
 //!
 //! assert!(!claims.is_expired());
@@ -53,8 +54,9 @@
 //!
 //! # Feature Flags
 //!
-//! - `db`: Enables `sqlx::FromRow` derive for database integration
-//! - `api`: Enables `utoipa::ToSchema` for OpenAPI generation
+//! - `postgres`: Enables PostgreSQL repository implementation
+//! - `api`: Enables OpenAPI schema generation
+//! - `validate`: Enables validation derives
 
 mod claims;
 mod user;

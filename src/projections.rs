@@ -21,11 +21,8 @@
 //! ```rust
 //! use revelation_user::{RUser, RUserPublic};
 //!
-//! let user = RUser::builder()
-//!     .id(uuid::Uuid::now_v7())
-//!     .email("secret@example.com")
-//!     .telegram_id(123456789)
-//!     .build();
+//! // User with sensitive data
+//! let user = RUser::from_email("secret@example.com");
 //!
 //! // Convert to public projection - sensitive fields excluded
 //! let public: RUserPublic = user.into();
