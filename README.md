@@ -53,6 +53,7 @@ SPDX-License-Identifier: MIT
 - [Framework Integration](#framework-integration)
 - [Extending Users](#extending-users)
 - [RBAC Permissions](#rbac-permissions)
+- [Code Coverage](#code-coverage)
 
 ---
 
@@ -230,9 +231,35 @@ assert!(claims.can(Permissions::READ));
 
 ## Code Coverage
 
+We maintain high test coverage to ensure reliability. Below are visual representations of our codebase coverage:
+
+### Sunburst
+
+The inner circle represents the entire project. Moving outward: folders, then individual files. Size = number of statements, color = coverage percentage.
+
 <p align="center">
   <a href="https://codecov.io/gh/Revelation-Path/revelation-user">
-    <img src="https://codecov.io/gh/Revelation-Path/revelation-user/graphs/sunburst.svg?token=YOUR_TOKEN" alt="Coverage Sunburst"/>
+    <img src="https://codecov.io/gh/Revelation-Path/revelation-user/graphs/sunburst.svg?token=XRN9IA6OJ9" alt="Coverage Sunburst"/>
+  </a>
+</p>
+
+### Grid
+
+Each block represents a file. Size = number of statements, color = coverage level (green = high, red = low).
+
+<p align="center">
+  <a href="https://codecov.io/gh/Revelation-Path/revelation-user">
+    <img src="https://codecov.io/gh/Revelation-Path/revelation-user/graphs/tree.svg?token=XRN9IA6OJ9" alt="Coverage Grid"/>
+  </a>
+</p>
+
+### Icicle
+
+Hierarchical view: top = entire project, descending through folders to individual files. Size and color represent statements and coverage.
+
+<p align="center">
+  <a href="https://codecov.io/gh/Revelation-Path/revelation-user">
+    <img src="https://codecov.io/gh/Revelation-Path/revelation-user/graphs/icicle.svg?token=XRN9IA6OJ9" alt="Coverage Icicle"/>
   </a>
 </p>
 
