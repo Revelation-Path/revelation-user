@@ -26,7 +26,7 @@ body = """
 {% if version -%}
 ## [{{ version | trim_start_matches(pat="v") }}]({{ self::remote_url() }}/releases/tag/{{ version }}) — {{ timestamp | date(format="%Y-%m-%d") }}
 {% else -%}
-## [Unreleased]({{ self::remote_url() }}/compare/{{ previous.version }}...HEAD)
+## [Unreleased]
 {% endif -%}
 
 {% for group, commits in commits | group_by(attribute="group") %}
@@ -51,7 +51,7 @@ body = """
 {% endfor %}
 {% endif -%}
 
-{% if version -%}
+{% if version and previous.version -%}
 **Full Changelog**: [`{{ previous.version }}...{{ version }}`]({{ self::remote_url() }}/compare/{{ previous.version }}...{{ version }})
 {% endif %}
 """
